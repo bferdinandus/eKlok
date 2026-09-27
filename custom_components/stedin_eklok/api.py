@@ -42,9 +42,14 @@ class StedinEklokAPI:
         self,
         session: aiohttp.ClientSession | None = None,
         time_zone: str | ZoneInfo | None = None,
+        cache_ttl: timedelta = timedelta(hours=1),
     ) -> None:
         """Initialiseer de API client."""
         self._session = session
+        self._cache_ttl = cache_ttl
+        self._cached_items: list[dict] | None = None
+        self._last_fetch: datetime | None = None
+
         if isinstance(time_zone, str):
             try:
                 self._tz = ZoneInfo(time_zone)
@@ -56,12 +61,12 @@ class StedinEklokAPI:
         else:
             self._tz = ZoneInfo(DEFAULT_TIMEZONE)
 
-    async def get_data(self) -> dict[str, Any]:
+    async def get_data(self, force_refresh: bool = False) -> dict[str, Any]:
         """Haal alle data op van de API."""
         today = datetime.now(self._tz)
         tomorrow = today + timedelta(days=1)
         
-        all_items = await self._fetch_all()
+        all_items = await self._fetch_all(force_refresh=force_refresh)
         today_data = self._filter_day(all_items, today)
         tomorrow_data = self._filter_day(all_items, tomorrow)
         
@@ -84,12 +89,19 @@ class StedinEklokAPI:
             "last_update": datetime.now(self._tz).isoformat(),
         }
 
-    async def _fetch_all(self) -> list[dict]:
+    async def _fetch_all(self, force_refresh: bool = False) -> list[dict]:
         """Haal alle ruwe data op van de API in één request."""
+        now_utc = datetime.now(timezone.utc)
+        if not force_refresh and self._cached_items is not None and self._last_fetch is not None:
+            if now_utc - self._last_fetch < self._cache_ttl:
+                _LOGGER.debug("Hergebruik gecachete Eklok data (leeftijd: %s)", now_utc - self._last_fetch)
+                return self._cached_items
+
         if self._session is None:
             raise StedinEklokConnectionError("Geen aiohttp ClientSession geconfigureerd")
 
         try:
+            _LOGGER.debug("Eklok API benaderd: %s", API_URL)
             async with self._session.get(
                 API_URL, timeout=aiohttp.ClientTimeout(total=10)
             ) as response:
@@ -98,13 +110,17 @@ class StedinEklokAPI:
                 
                 # API retourneert {"data": [...]} structuur
                 if isinstance(data, dict) and "data" in data:
-                    return data["data"]
+                    raw_items = data["data"]
                 elif isinstance(data, list):
-                    return data
+                    raw_items = data
                 else:
                     raise StedinEklokDataError(
                         f"Onverwacht dataformaat ontvangen van Eklok API: {type(data)}"
                     )
+
+                self._cached_items = raw_items
+                self._last_fetch = now_utc
+                return self._cached_items
                 
         except (aiohttp.ClientError, asyncio.TimeoutError, TimeoutError) as err:
             _LOGGER.error("Fout bij ophalen van Eklok data: %s", err)

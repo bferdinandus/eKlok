@@ -19,7 +19,7 @@ De [Stedin Eklok](https://eklok.nl/) is een real-time indicatie van netbelasting
 - 🎨 **Visuele feedback**: Gebruik de exacte Eklok kleuren in je dashboard
 - 🤖 **Automatiseringen**: Schakel grote verbruikers automatisch op optimale momenten
 - 📈 **Daganalyse**: Overzicht van groene/oranje/rode periodes per dag
-- 🔄 **Automatische updates** elke 15 minuten
+- 🔄 **Automatische updates**: Elke 5 minuten sensor-updates met 1 uur API-caching voor minimale netwerkbelasting
 - 🌐 **Meertalige ondersteuning** (NL, EN)
 - 🚫 **Geen login vereist** - Gebruikt publieke API
 
@@ -108,7 +108,7 @@ automation:
 A: Nee! De Eklok API is publiek beschikbaar voor iedereen in Nederland.
 
 **Q: Hoe vaak wordt de data bijgewerkt?**  
-A: Elke 15 minuten automatisch.
+A: De sensors worden elke 5 minuten bijgewerkt op basis van het huidige tijdstip. Nieuwe prognosedata wordt elk uur opgehaald van de Eklok API om netwerkbelasting te minimaliseren.
 
 **Q: Wat betekent de waarde -100 tot +100?**  
 A: Dit is een indicatie van de netbelasting (schaal van -100 tot +100). Negatieve waarden (≤ -30) betekenen lage netbelasting (groen, beste moment voor energieverbruik). Waarden tussen -30 en +30 zijn gemiddeld/neutraal (oranje), en positieve waarden (≥ +30) duiden op hoge netbelasting (rood, piekbelasting).
