@@ -49,6 +49,7 @@ class StedinEklokAPI:
         self._cache_ttl = cache_ttl
         self._cached_items: list[dict] | None = None
         self._last_fetch: datetime | None = None
+        self._last_update: str | None = None
         self._today_date: date_type | None = None
         self._today_items: dict[str, dict] = {}
         self._today_data: list[dict] = []
@@ -106,6 +107,7 @@ class StedinEklokAPI:
             # Analyseer de data alleen bij nieuwe data of datumwissel
             self._today_analysis = self._analyze_day(self._today_data) if self._today_data else {}
             self._tomorrow_analysis = self._analyze_day(self._tomorrow_data) if self._tomorrow_data else {}
+            self._last_update = now_local.isoformat()
         
         # Bepaal huidige status (altijd voor het huidige tijdstip)
         current_status = self._get_current_status(self._today_data)
@@ -116,7 +118,7 @@ class StedinEklokAPI:
             "today_analysis": self._today_analysis,
             "tomorrow_analysis": self._tomorrow_analysis,
             "current_status": current_status,
-            "last_update": datetime.now(self._tz).isoformat(),
+            "last_update": self._last_update or now_local.isoformat(),
         }
 
     async def _fetch_all(self, force_refresh: bool = False) -> tuple[list[dict], bool]:
