@@ -11,12 +11,12 @@ sections:
       - type: gauge
         entity: sensor.stedin_eklok_huidige_waarde
         name: eKlok Netbelasting
-        min: 0
+        min: -100
         max: 100
         severity:
-          green: 0
-          yellow: 34
-          red: 67
+          green: -100
+          yellow: -30
+          red: 30
         needle: true
   - type: grid
     cards:

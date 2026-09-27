@@ -7,14 +7,14 @@ Deze custom component integreert de **Stedin Eklok** in Home Assistant, zodat je
 
 ## 🎯 Wat is de Stedin Eklok?
 
-De [Stedin Eklok](https://eklok.nl/) is een real-time indicatie van netbelasting, weergegeven in een eenvoudig kleurensysteem:
-- 🟢 **Groen** (< 34): Lage belasting - Ideaal moment voor groot verbruik!
-- 🟠 **Oranje** (34-66): Gemiddelde belasting
-- 🔴 **Rood** (> 66): Hoge belasting - Vermijd verbruik waar mogelijk
+De [Stedin Eklok](https://eklok.nl/) is een real-time indicatie van netbelasting, weergegeven in een eenvoudig kleurensysteem (-100 tot +100):
+- 🟢 **Groen** (≤ -30): Lage belasting - Ideaal moment voor groot verbruik!
+- 🟠 **Oranje** (-30 tot +30): Gemiddelde belasting
+- 🔴 **Rood** (≥ +30): Hoge belasting - Vermijd verbruik waar mogelijk
 
 ## ✨ Functies
 
-- 📊 **Real-time netbelasting indicatie** (0-100 schaal met kleurcode)
+- 📊 **Real-time netbelasting indicatie** (-100 tot +100 schaal met kleurcode)
 - ⏰ **Slimme planning**: Vind automatisch de beste momenten voor vandaag EN morgen
 - 🎨 **Visuele feedback**: Gebruik de exacte Eklok kleuren in je dashboard
 - 🤖 **Automatiseringen**: Schakel grote verbruikers automatisch op optimale momenten
@@ -53,7 +53,7 @@ Deze integratie voegt de volgende sensors toe:
 
 | Sensor | Beschrijving |
 |--------|--------------|
-| `sensor.stedin_eklok_huidige_waarde` | Huidige netbelasting (0-100) |
+| `sensor.stedin_eklok_huidige_waarde` | Huidige netbelasting (-100 tot +100) |
 | `sensor.stedin_eklok_goed_moment` | Goed moment indicator (Aan/Uit) |
 | `sensor.stedin_eklok_groene_uren_vandaag` | Aantal groene uren vandaag |
 | `sensor.stedin_eklok_beste_moment_vandaag` | Beste moment vandaag (timestamp) |
@@ -77,12 +77,12 @@ sections:
       - type: gauge
         entity: sensor.stedin_eklok_huidige_waarde
         name: eKlok Netbelasting
-        min: 0
+        min: -100
         max: 100
         severity:
-          green: 0
-          yellow: 34
-          red: 67
+          green: -100
+          yellow: -30
+          red: 30
         needle: true
   - type: grid
     cards:
@@ -113,7 +113,7 @@ automation:
     trigger:
       - platform: numeric_state
         entity_id: sensor.stedin_eklok_huidige_waarde
-        below: 30
+        below: -30
     condition:
       - condition: time
         after: "08:00:00"
@@ -148,8 +148,8 @@ A: Nee! De Eklok API is publiek beschikbaar voor iedereen in Nederland.
 **Q: Hoe vaak wordt de data bijgewerkt?**  
 A: Elke 15 minuten automatisch.
 
-**Q: Wat betekent de waarde 0-100?**  
-A: Dit is een indicatie van de netbelasting. Lager = minder netbelasting = beter moment voor energieverbruik.
+**Q: Wat betekent de waarde -100 tot +100?**  
+A: Dit is een indicatie van de netbelasting (schaal van -100 tot +100). Negatieve waarden (≤ -30) betekenen lage netbelasting (groen, beste moment voor energieverbruik). Waarden tussen -30 en +30 zijn gemiddeld/neutraal (oranje), en positieve waarden (≥ +30) duiden op hoge netbelasting (rood, piekbelasting).
 
 ## 📜 Licentie
 
