@@ -19,7 +19,8 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Stedin Eklok vanuit een config entry."""
-    api = StedinEklokAPI()
+    time_zone = getattr(getattr(hass, "config", None), "time_zone", None)
+    api = StedinEklokAPI(time_zone=time_zone)
     
     async def async_update_data():
         """Haal data op van de API."""

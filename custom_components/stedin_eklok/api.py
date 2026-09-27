@@ -2,14 +2,16 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date as date_type, datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import requests
 
 _LOGGER = logging.getLogger(__name__)
 
 API_URL = "https://eklok.nl/api/pricedetail"
+DEFAULT_TIMEZONE = "Europe/Amsterdam"
 
 
 class StedinEklokAPI:
@@ -23,13 +25,23 @@ class StedinEklokAPI:
     - Tijden in UTC
     """
 
-    def __init__(self) -> None:
+    def __init__(self, time_zone: str | ZoneInfo | None = None) -> None:
         """Initialiseer de API client."""
         self._session = requests.Session()
+        if isinstance(time_zone, str):
+            try:
+                self._tz = ZoneInfo(time_zone)
+            except ZoneInfoNotFoundError:
+                _LOGGER.warning("Onbekende tijdzone '%s', terugvallen op %s", time_zone, DEFAULT_TIMEZONE)
+                self._tz = ZoneInfo(DEFAULT_TIMEZONE)
+        elif isinstance(time_zone, (timezone, ZoneInfo)):
+            self._tz = time_zone
+        else:
+            self._tz = ZoneInfo(DEFAULT_TIMEZONE)
 
     def get_data(self) -> dict[str, Any]:
         """Haal alle data op van de API."""
-        today = datetime.now(timezone.utc)
+        today = datetime.now(self._tz)
         tomorrow = today + timedelta(days=1)
         
         all_items = self._fetch_all()
@@ -52,7 +64,7 @@ class StedinEklokAPI:
             "today_analysis": today_analysis,
             "tomorrow_analysis": tomorrow_analysis,
             "current_status": current_status,
-            "last_update": datetime.now().isoformat(),
+            "last_update": datetime.now(self._tz).isoformat(),
         }
 
     def _fetch_all(self) -> list[dict] | None:
@@ -74,20 +86,27 @@ class StedinEklokAPI:
             _LOGGER.error("Fout bij ophalen van Eklok data: %s", err)
             return None
 
-    def _filter_day(self, items: list[dict] | None, date: datetime) -> list[dict] | None:
+    def _filter_day(self, items: list[dict] | None, date: datetime | date_type) -> list[dict] | None:
         """Filter data voor een specifieke dag."""
         if items is None:
             return None
 
-        target_date = date.date()
+        if isinstance(date, datetime):
+            target_date = date.astimezone(self._tz).date() if date.tzinfo else date.date()
+        elif isinstance(date, date_type):
+            target_date = date
+        else:
+            return None
+
         matching_items = []
 
         for item in items:
             try:
                 item_datetime = datetime.fromisoformat(item["date"].replace("Z", "+00:00"))
+                local_datetime = item_datetime.astimezone(self._tz)
 
-                # Compare the UTC calendar date from the API
-                if item_datetime.date() == target_date:
+                # Compare local calendar date in the target timezone
+                if local_datetime.date() == target_date:
                     matching_items.append(item)
 
             except (KeyError, TypeError, ValueError):
@@ -162,7 +181,8 @@ class StedinEklokAPI:
             try:
                 dt_str = item.get("date", "")
                 dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-                hour = dt.hour
+                local_dt = dt.astimezone(self._tz)
+                hour = local_dt.hour
                 
                 if hour not in hourly:
                     hourly[hour] = {"ranges": [], "colors": []}
@@ -195,15 +215,15 @@ class StedinEklokAPI:
         if not today_data:
             return {"status": "unknown", "range": 100, "color": "gray", "is_good_moment": False}
         
-        now_utc = datetime.now(timezone.utc)
+        now = datetime.now(self._tz)
         closest_item = None
         min_diff = timedelta(days=1)
         
         for item in today_data:
             try:
                 dt_str = item.get("date", "")
-                item_dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-                diff = abs(now_utc - item_dt)
+                item_dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00")).astimezone(self._tz)
+                diff = abs(now - item_dt)
                 
                 if diff < min_diff:
                     min_diff = diff
