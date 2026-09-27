@@ -49,6 +49,12 @@ class StedinEklokAPI:
         self._cache_ttl = cache_ttl
         self._cached_items: list[dict] | None = None
         self._last_fetch: datetime | None = None
+        self._today_date: date_type | None = None
+        self._today_items: dict[str, dict] = {}
+        self._today_data: list[dict] = []
+        self._tomorrow_data: list[dict] = []
+        self._today_analysis: dict[str, Any] = {}
+        self._tomorrow_analysis: dict[str, Any] = {}
 
         if isinstance(time_zone, str):
             try:
@@ -63,39 +69,66 @@ class StedinEklokAPI:
 
     async def get_data(self, force_refresh: bool = False) -> dict[str, Any]:
         """Haal alle data op van de API."""
-        today = datetime.now(self._tz)
-        tomorrow = today + timedelta(days=1)
+        now_local = datetime.now(self._tz)
+        today_date = now_local.date()
+        tomorrow_date = today_date + timedelta(days=1)
         
-        all_items = await self._fetch_all(force_refresh=force_refresh)
-        today_data = self._filter_day(all_items, today)
-        tomorrow_data = self._filter_day(all_items, tomorrow)
+        all_items, is_new_data = await self._fetch_all(force_refresh=force_refresh)
         
-        _LOGGER.debug("Today data: %s items", len(today_data) if today_data else 0)
-        _LOGGER.debug("Tomorrow data: %s items", len(tomorrow_data) if tomorrow_data else 0)
+        day_changed = self._today_date != today_date
         
-        # Analyseer de data
-        today_analysis = self._analyze_day(today_data) if today_data else {}
-        tomorrow_analysis = self._analyze_day(tomorrow_data) if tomorrow_data else {}
+        if day_changed:
+            self._today_date = today_date
+            self._today_items = {}
+            if all_items:
+                filtered_today = self._filter_day(all_items, today_date) or []
+                for item in filtered_today:
+                    if "date" in item:
+                        self._today_items[item["date"]] = item
         
-        # Bepaal huidige status
-        current_status = self._get_current_status(today_data)
+        if is_new_data:
+            filtered_today = self._filter_day(all_items, today_date) or []
+            for item in filtered_today:
+                if "date" in item:
+                    self._today_items[item["date"]] = item
+            
+            self._tomorrow_data = self._filter_day(all_items, tomorrow_date) or []
+
+        if day_changed or is_new_data or not self._today_analysis:
+            self._today_data = sorted(
+                self._today_items.values(),
+                key=lambda x: x.get("date", "")
+            ) if self._today_items else []
+            
+            _LOGGER.debug("Today data: %s items", len(self._today_data))
+            _LOGGER.debug("Tomorrow data: %s items", len(self._tomorrow_data))
+            
+            # Analyseer de data alleen bij nieuwe data of datumwissel
+            self._today_analysis = self._analyze_day(self._today_data) if self._today_data else {}
+            self._tomorrow_analysis = self._analyze_day(self._tomorrow_data) if self._tomorrow_data else {}
+        
+        # Bepaal huidige status (altijd voor het huidige tijdstip)
+        current_status = self._get_current_status(self._today_data)
         
         return {
-            "today": today_data,
-            "tomorrow": tomorrow_data,
-            "today_analysis": today_analysis,
-            "tomorrow_analysis": tomorrow_analysis,
+            "today": self._today_data,
+            "tomorrow": self._tomorrow_data,
+            "today_analysis": self._today_analysis,
+            "tomorrow_analysis": self._tomorrow_analysis,
             "current_status": current_status,
             "last_update": datetime.now(self._tz).isoformat(),
         }
 
-    async def _fetch_all(self, force_refresh: bool = False) -> list[dict]:
-        """Haal alle ruwe data op van de API in één request."""
+    async def _fetch_all(self, force_refresh: bool = False) -> tuple[list[dict], bool]:
+        """Haal alle ruwe data op van de API in één request.
+        
+        Retourneert een tuple van (items, is_new_data).
+        """
         now_utc = datetime.now(timezone.utc)
         if not force_refresh and self._cached_items is not None and self._last_fetch is not None:
             if now_utc - self._last_fetch < self._cache_ttl:
                 _LOGGER.debug("Hergebruik gecachete Eklok data (leeftijd: %s)", now_utc - self._last_fetch)
-                return self._cached_items
+                return self._cached_items, False
 
         if self._session is None:
             raise StedinEklokConnectionError("Geen aiohttp ClientSession geconfigureerd")
@@ -120,7 +153,7 @@ class StedinEklokAPI:
 
                 self._cached_items = raw_items
                 self._last_fetch = now_utc
-                return self._cached_items
+                return self._cached_items, True
                 
         except (aiohttp.ClientError, asyncio.TimeoutError, TimeoutError) as err:
             _LOGGER.error("Fout bij ophalen van Eklok data: %s", err)
