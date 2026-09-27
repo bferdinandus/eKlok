@@ -1,39 +1,94 @@
 # Stedin Eklok Dashboard voor Home Assistant
 # Kopieer deze configuratie naar je Lovelace dashboard
+views:
+  - type: sections
+    title: ⚡ Energie
+    path: energie
+    icon: mdi:lightning-bolt
+    sections:
+      - type: grid
+        cards:
+          - type: gauge
+            entity: sensor.stedin_eklok_huidige_waarde
+            name: eKlok Netbelasting
+            min: -100
+            max: 100
+            severity:
+              green: -100
+              yellow: -30
+              red: 30
+            needle: true
+          - type: entities
+            title: 🕐 eKlok Momenten
+            entities:
+              - entity: binary_sensor.stedin_eklok_good_moment
+              - entity: sensor.stedin_eklok_groene_uren_vandaag
+              - entity: sensor.stedin_eklok_beste_moment_vandaag
+              - entity: sensor.stedin_eklok_beste_moment_morgen
+              - entity: sensor.stedin_eklok_gemiddelde_vandaag
+      - type: grid
+        cards:
+          - type: history-graph
+            entities:
+              - entity: sensor.stedin_eklok_huidige_waarde
+                name: eKlok
+            title: 📈 Netbelasting Trend (24u)
+            hours_to_show: 24
+            refresh_interval: 300
+            min_y_axis: 100
+            max_y_axis: -100
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: 📊 Uurprognose (Vandaag & Morgen)
+            graph_span: 48h
+            span:
+              start: day
+            now:
+              show: true
+              color: '#ffffff'
+            apex_config:
+              yaxis:
+                min: -100
+                max: 100
+                reversed: true
+            experimental:
+              color_threshold: true
+            series:
+              - entity: sensor.stedin_eklok_uurdata
+                name: Stedin range
+                type: area
+                color_threshold:
+                  - value: -30
+                    color: red
+                  - value: 0
+                    color: orange
+                  - value: 30
+                    color: green
+                stroke_width: 0
+                data_generator: |
+                  const result = [];
+                  const now = new Date();
 
-type: sections
-title: ⚡ Energie
-path: energie
-icon: mdi:lightning-bolt
-sections:
-  - type: grid
-    cards:
-      - type: gauge
-        entity: sensor.stedin_eklok_huidige_waarde
-        name: eKlok Netbelasting
-        min: -100
-        max: 100
-        severity:
-          green: -100
-          yellow: -30
-          red: 30
-        needle: true
-  - type: grid
-    cards:
-      - type: entities
-        title: 🕐 eKlok Momenten
-        entities:
-          - binary_sensor.stedin_eklok_goed_moment
-          - sensor.stedin_eklok_groene_uren_vandaag
-          - sensor.stedin_eklok_beste_moment_vandaag
-          - sensor.stedin_eklok_beste_moment_morgen
-          - sensor.stedin_eklok_gemiddelde_vandaag
-  - type: grid
-    cards:
-      - type: history-graph
-        title: 📈 Netbelasting Trend (24u)
-        hours_to_show: 24
-        refresh_interval: 300
-        entities:
-          - entity: sensor.stedin_eklok_huidige_waarde
-            name: eKlok
+                  const year = now.getFullYear();
+                  const month = now.getMonth();
+                  const day = now.getDate();
+
+                  const today = entity.attributes.hourly_today || [];
+                  const tomorrow = entity.attributes.hourly_tomorrow || [];
+
+                  today.forEach(item => {
+                    result.push([
+                      new Date(year, month, day, Number(item.hour), 0, 0).getTime(),
+                      Number(item.range)
+                    ]);
+                  });
+
+                  tomorrow.forEach(item => {
+                    result.push([
+                      new Date(year, month, day + 1, Number(item.hour), 0, 0).getTime(),
+                      Number(item.range)
+                    ]);
+                  });
+
+                  return result;

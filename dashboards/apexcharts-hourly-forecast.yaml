@@ -1,0 +1,63 @@
+# Stedin Eklok - ApexCharts Card Configuratie voor Home Assistant
+# 
+# Vereiste Lovelace card (installeer via HACS):
+# https://github.com/RomRider/apexcharts-card
+#
+# Deze kaart visualiseert de 24-uurs netbelastingvoorspellingen van Stedin Eklok
+# op basis van de sensor.stedin_eklok_uurdata attributen (hourly_today en hourly_tomorrow).
+
+type: custom:apexcharts-card
+header:
+  show: true
+  title: 📊 Uurprognose (Vandaag & Morgen)
+graph_span: 48h
+span:
+  start: day
+now:
+  show: true
+  color: '#ffffff'
+apex_config:
+  yaxis:
+    min: -100
+    max: 100
+    reversed: true
+experimental:
+  color_threshold: true
+series:
+  - entity: sensor.stedin_eklok_uurdata
+    name: Stedin range
+    type: area
+    color_threshold:
+      - value: -30
+        color: red
+      - value: 0
+        color: orange
+      - value: 30
+        color: green
+    stroke_width: 0
+    data_generator: |
+      const result = [];
+      const now = new Date();
+
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const day = now.getDate();
+
+      const today = entity.attributes.hourly_today || [];
+      const tomorrow = entity.attributes.hourly_tomorrow || [];
+
+      today.forEach(item => {
+        result.push([
+          new Date(year, month, day, Number(item.hour), 0, 0).getTime(),
+          Number(item.range)
+        ]);
+      });
+
+      tomorrow.forEach(item => {
+        result.push([
+          new Date(year, month, day + 1, Number(item.hour), 0, 0).getTime(),
+          Number(item.range)
+        ]);
+      });
+
+      return result;

@@ -62,48 +62,10 @@ Deze integratie voegt de volgende sensors toe:
 | `sensor.stedin_eklok_gemiddelde_morgen` | Gemiddelde waarde morgen |
 | `sensor.stedin_eklok_uurdata` | Alle uurdata voor grafieken |
 
-## 🎨 Dashboard
+## 🎨 Dashboard & Visualisaties
 
-Een voorbeeld dashboard is beschikbaar in [`dashboards/energie-dashboard.yaml`](dashboards/energie-dashboard.yaml):
-
-```yaml
-type: sections
-title: ⚡ Energie
-path: energie
-icon: mdi:lightning-bolt
-sections:
-  - type: grid
-    cards:
-      - type: gauge
-        entity: sensor.stedin_eklok_huidige_waarde
-        name: eKlok Netbelasting
-        min: -100
-        max: 100
-        severity:
-          green: -100
-          yellow: -30
-          red: 30
-        needle: true
-  - type: grid
-    cards:
-      - type: entities
-        title: 🕐 eKlok Momenten
-        entities:
-          - binary_sensor.stedin_eklok_goed_moment
-          - sensor.stedin_eklok_groene_uren_vandaag
-          - sensor.stedin_eklok_beste_moment_vandaag
-          - sensor.stedin_eklok_beste_moment_morgen
-          - sensor.stedin_eklok_gemiddelde_vandaag
-  - type: grid
-    cards:
-      - type: history-graph
-        title: 📈 Netbelasting Trend (24u)
-        hours_to_show: 24
-        refresh_interval: 300
-        entities:
-          - entity: sensor.stedin_eklok_huidige_waarde
-            name: eKlok
-```
+### Standaard Dashboard
+Een kant-en-klaar Lovelace dashboard is beschikbaar in [`dashboards/energie-dashboard.yaml`](dashboards/energie-dashboard.yaml) Dit dashboard maakt gebruik van de [ApexCharts card](https://github.com/RomRider/apexcharts-card)
 
 ## 🤖 Voorbeeld Automatisering
 
