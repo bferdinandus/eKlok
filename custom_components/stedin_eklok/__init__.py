@@ -7,6 +7,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -22,13 +23,14 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Stedin Eklok vanuit een config entry."""
+    session = async_get_clientsession(hass)
     time_zone = getattr(getattr(hass, "config", None), "time_zone", None)
-    api = StedinEklokAPI(time_zone=time_zone)
+    api = StedinEklokAPI(session=session, time_zone=time_zone)
     
     async def async_update_data():
         """Haal data op van de API."""
         try:
-            return await hass.async_add_executor_job(api.get_data)
+            return await api.get_data()
         except StedinEklokError as err:
             raise UpdateFailed(f"Fout bij ophalen van Eklok data: {err}") from err
         except Exception as err:

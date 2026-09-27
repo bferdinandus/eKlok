@@ -1,12 +1,13 @@
 """API client voor Stedin Eklok."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date as date_type, datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-import requests
+import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,9 +38,13 @@ class StedinEklokAPI:
     - Tijden in UTC
     """
 
-    def __init__(self, time_zone: str | ZoneInfo | None = None) -> None:
+    def __init__(
+        self,
+        session: aiohttp.ClientSession | None = None,
+        time_zone: str | ZoneInfo | None = None,
+    ) -> None:
         """Initialiseer de API client."""
-        self._session = requests.Session()
+        self._session = session
         if isinstance(time_zone, str):
             try:
                 self._tz = ZoneInfo(time_zone)
@@ -51,12 +56,12 @@ class StedinEklokAPI:
         else:
             self._tz = ZoneInfo(DEFAULT_TIMEZONE)
 
-    def get_data(self) -> dict[str, Any]:
+    async def get_data(self) -> dict[str, Any]:
         """Haal alle data op van de API."""
         today = datetime.now(self._tz)
         tomorrow = today + timedelta(days=1)
         
-        all_items = self._fetch_all()
+        all_items = await self._fetch_all()
         today_data = self._filter_day(all_items, today)
         tomorrow_data = self._filter_day(all_items, tomorrow)
         
@@ -79,24 +84,29 @@ class StedinEklokAPI:
             "last_update": datetime.now(self._tz).isoformat(),
         }
 
-    def _fetch_all(self) -> list[dict]:
+    async def _fetch_all(self) -> list[dict]:
         """Haal alle ruwe data op van de API in één request."""
+        if self._session is None:
+            raise StedinEklokConnectionError("Geen aiohttp ClientSession geconfigureerd")
+
         try:
-            response = self._session.get(API_URL, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            
-            # API retourneert {"data": [...]} structuur
-            if isinstance(data, dict) and "data" in data:
-                return data["data"]
-            elif isinstance(data, list):
-                return data
-            else:
-                raise StedinEklokDataError(
-                    f"Onverwacht dataformaat ontvangen van Eklok API: {type(data)}"
-                )
-            
-        except requests.RequestException as err:
+            async with self._session.get(
+                API_URL, timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
+                response.raise_for_status()
+                data = await response.json(content_type=None)
+                
+                # API retourneert {"data": [...]} structuur
+                if isinstance(data, dict) and "data" in data:
+                    return data["data"]
+                elif isinstance(data, list):
+                    return data
+                else:
+                    raise StedinEklokDataError(
+                        f"Onverwacht dataformaat ontvangen van Eklok API: {type(data)}"
+                    )
+                
+        except (aiohttp.ClientError, asyncio.TimeoutError, TimeoutError) as err:
             _LOGGER.error("Fout bij ophalen van Eklok data: %s", err)
             raise StedinEklokConnectionError(
                 f"Fout bij ophalen van Eklok data: {err}"

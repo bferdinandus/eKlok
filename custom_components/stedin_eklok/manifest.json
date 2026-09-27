@@ -6,6 +6,6 @@
   "documentation": "https://github.com/phoenix-blue/eKlok",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/phoenix-blue/eKlok/issues",
-  "requirements": ["requests>=2.28.0"],
+  "requirements": [],
   "version": "1.0.0"
 }
