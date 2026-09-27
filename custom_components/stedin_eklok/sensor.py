@@ -57,6 +57,8 @@ async def async_setup_entry(
 class StedinEklokSensorBase(CoordinatorEntity, SensorEntity):
     """Basis sensor voor Stedin Eklok."""
     
+    _attr_has_entity_name = True
+    
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
@@ -81,11 +83,12 @@ class StedinEklokGoodMomentSensor(StedinEklokSensorBase):
     Uit = range > -30 (neutraal of slecht moment)
     """
     
+    _attr_translation_key = "good_moment"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_good_moment"
-        self._attr_name = "Stedin Eklok Goed Moment"
         self._attr_icon = "mdi:lightning-bolt"
     
     @property
@@ -117,11 +120,12 @@ class StedinEklokCurrentRangeSensor(StedinEklokSensorBase):
     Range: -100 (beste) tot +100 (slechtste)
     """
     
+    _attr_translation_key = "current_range"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_current_range"
-        self._attr_name = "Stedin Eklok Huidige Waarde"
         self._attr_icon = "mdi:gauge"
         self._attr_state_class = SensorStateClass.MEASUREMENT
     
@@ -152,11 +156,12 @@ class StedinEklokCurrentRangeSensor(StedinEklokSensorBase):
 class StedinEklokTodayBestMomentSensor(StedinEklokSensorBase):
     """Sensor voor het beste moment vandaag."""
     
+    _attr_translation_key = "today_best"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_today_best"
-        self._attr_name = "Stedin Eklok Beste Moment Vandaag"
         self._attr_icon = "mdi:clock-star"
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
     
@@ -191,11 +196,12 @@ class StedinEklokTodayAverageSensor(StedinEklokSensorBase):
     Lager = beter (negatief is goed).
     """
     
+    _attr_translation_key = "today_average"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_today_average"
-        self._attr_name = "Stedin Eklok Gemiddelde Vandaag"
         self._attr_icon = "mdi:chart-line"
         self._attr_state_class = SensorStateClass.MEASUREMENT
     
@@ -224,11 +230,12 @@ class StedinEklokTodayAverageSensor(StedinEklokSensorBase):
 class StedinEklokTomorrowBestMomentSensor(StedinEklokSensorBase):
     """Sensor voor het beste moment morgen."""
     
+    _attr_translation_key = "tomorrow_best"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_tomorrow_best"
-        self._attr_name = "Stedin Eklok Beste Moment Morgen"
         self._attr_icon = "mdi:clock-star"
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
     
@@ -265,11 +272,12 @@ class StedinEklokTomorrowAverageSensor(StedinEklokSensorBase):
     Data is pas beschikbaar als Eklok de prognose publiceert.
     """
     
+    _attr_translation_key = "tomorrow_average"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_tomorrow_average"
-        self._attr_name = "Stedin Eklok Gemiddelde Morgen"
         self._attr_icon = "mdi:chart-line"
         self._attr_state_class = SensorStateClass.MEASUREMENT
     
@@ -303,11 +311,12 @@ class StedinEklokHourlyDataSensor(StedinEklokSensorBase):
     voor gebruik met ApexCharts.
     """
     
+    _attr_translation_key = "hourly_data"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_hourly_data"
-        self._attr_name = "Stedin Eklok Uurdata"
         self._attr_icon = "mdi:chart-bar"
     
     @property
@@ -344,11 +353,12 @@ class StedinEklokGreenCountSensor(StedinEklokSensorBase):
     Groene uren = uren waar de gemiddelde range <= -30.
     """
     
+    _attr_translation_key = "green_count"
+    
     def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
         """Initialiseer de sensor."""
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_green_count"
-        self._attr_name = "Stedin Eklok Groene Uren Vandaag"
         self._attr_icon = "mdi:leaf"
         self._attr_native_unit_of_measurement = "uur"
         self._attr_state_class = SensorStateClass.MEASUREMENT
