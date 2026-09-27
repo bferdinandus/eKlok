@@ -14,6 +14,18 @@ API_URL = "https://eklok.nl/api/pricedetail"
 DEFAULT_TIMEZONE = "Europe/Amsterdam"
 
 
+class StedinEklokError(Exception):
+    """Algemene exception voor Stedin Eklok API."""
+
+
+class StedinEklokConnectionError(StedinEklokError):
+    """Exception voor verbindingsfouten met Stedin Eklok API."""
+
+
+class StedinEklokDataError(StedinEklokError):
+    """Exception voor ongeldige data van Stedin Eklok API."""
+
+
 class StedinEklokAPI:
     """API client voor Stedin Eklok.
     
@@ -67,7 +79,7 @@ class StedinEklokAPI:
             "last_update": datetime.now(self._tz).isoformat(),
         }
 
-    def _fetch_all(self) -> list[dict] | None:
+    def _fetch_all(self) -> list[dict]:
         """Haal alle ruwe data op van de API in één request."""
         try:
             response = self._session.get(API_URL, timeout=10)
@@ -80,11 +92,20 @@ class StedinEklokAPI:
             elif isinstance(data, list):
                 return data
             else:
-                return None
+                raise StedinEklokDataError(
+                    f"Onverwacht dataformaat ontvangen van Eklok API: {type(data)}"
+                )
             
         except requests.RequestException as err:
             _LOGGER.error("Fout bij ophalen van Eklok data: %s", err)
-            return None
+            raise StedinEklokConnectionError(
+                f"Fout bij ophalen van Eklok data: {err}"
+            ) from err
+        except ValueError as err:
+            _LOGGER.error("Fout bij parsen van JSON response: %s", err)
+            raise StedinEklokDataError(
+                f"Ongeldige JSON ontvangen van Eklok API: {err}"
+            ) from err
 
     def _filter_day(self, items: list[dict] | None, date: datetime | date_type) -> list[dict] | None:
         """Filter data voor een specifieke dag."""

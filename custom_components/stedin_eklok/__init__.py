@@ -7,10 +7,13 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
 
 from .const import DOMAIN
-from .api import StedinEklokAPI
+from .api import StedinEklokAPI, StedinEklokError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +27,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     async def async_update_data():
         """Haal data op van de API."""
-        return await hass.async_add_executor_job(api.get_data)
+        try:
+            return await hass.async_add_executor_job(api.get_data)
+        except StedinEklokError as err:
+            raise UpdateFailed(f"Fout bij ophalen van Eklok data: {err}") from err
+        except Exception as err:
+            raise UpdateFailed(f"Onverwachte fout bij ophalen van Eklok data: {err}") from err
     
     coordinator = DataUpdateCoordinator(
         hass,
