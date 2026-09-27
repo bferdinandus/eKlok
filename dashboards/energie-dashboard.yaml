@@ -23,7 +23,7 @@ sections:
       - type: entities
         title: 🕐 eKlok Momenten
         entities:
-          - sensor.stedin_eklok_goed_moment
+          - binary_sensor.stedin_eklok_goed_moment
           - sensor.stedin_eklok_groene_uren_vandaag
           - sensor.stedin_eklok_beste_moment_vandaag
           - sensor.stedin_eklok_beste_moment_morgen

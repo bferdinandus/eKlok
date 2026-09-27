@@ -54,7 +54,7 @@ Deze integratie voegt de volgende sensors toe:
 | Sensor | Beschrijving |
 |--------|--------------|
 | `sensor.stedin_eklok_huidige_waarde` | Huidige netbelasting (-100 tot +100) |
-| `sensor.stedin_eklok_goed_moment` | Goed moment indicator (Aan/Uit) |
+| `binary_sensor.stedin_eklok_goed_moment` | Goed moment indicator (Aan/Uit) |
 | `sensor.stedin_eklok_groene_uren_vandaag` | Aantal groene uren vandaag |
 | `sensor.stedin_eklok_beste_moment_vandaag` | Beste moment vandaag (timestamp) |
 | `sensor.stedin_eklok_beste_moment_morgen` | Beste moment morgen (timestamp) |
@@ -89,7 +89,7 @@ sections:
       - type: entities
         title: 🕐 eKlok Momenten
         entities:
-          - sensor.stedin_eklok_goed_moment
+          - binary_sensor.stedin_eklok_goed_moment
           - sensor.stedin_eklok_groene_uren_vandaag
           - sensor.stedin_eklok_beste_moment_vandaag
           - sensor.stedin_eklok_beste_moment_morgen

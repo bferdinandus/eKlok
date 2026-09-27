@@ -12,10 +12,12 @@
     }
   },
   "entity": {
-    "sensor": {
+    "binary_sensor": {
       "good_moment": {
         "name": "Goed Moment"
-      },
+      }
+    },
+    "sensor": {
       "current_range": {
         "name": "Huidige Waarde"
       },

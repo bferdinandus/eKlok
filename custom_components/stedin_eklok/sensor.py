@@ -41,7 +41,6 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     
     sensors = [
-        StedinEklokGoodMomentSensor(coordinator, entry),
         StedinEklokCurrentRangeSensor(coordinator, entry),
         StedinEklokTodayBestMomentSensor(coordinator, entry),
         StedinEklokTodayAverageSensor(coordinator, entry),
@@ -74,44 +73,6 @@ class StedinEklokSensorBase(CoordinatorEntity, SensorEntity):
             model="Eklok",
             configuration_url="https://eklok.nl",
         )
-
-
-class StedinEklokGoodMomentSensor(StedinEklokSensorBase):
-    """Binary sensor voor goed moment (Aan/Uit).
-    
-    Aan = range <= -30 (goed moment, groen)
-    Uit = range > -30 (neutraal of slecht moment)
-    """
-    
-    _attr_translation_key = "good_moment"
-    
-    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
-        """Initialiseer de sensor."""
-        super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_good_moment"
-        self._attr_icon = "mdi:lightning-bolt"
-    
-    @property
-    def native_value(self) -> str:
-        """Return of het nu een goed moment is."""
-        if self.coordinator.data:
-            current = self.coordinator.data.get("current_status", {})
-            return "Aan" if current.get("is_good_moment", False) else "Uit"
-        return "Uit"
-    
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra attributen."""
-        if self.coordinator.data:
-            current = self.coordinator.data.get("current_status", {})
-            range_val = current.get("range", 100)
-            return {
-                "range": range_val,
-                "color": current.get("color", "gray"),
-                "status": current.get("status", "unknown"),
-                "uitleg": "Negatieve range = goed moment, Positieve range = slecht moment",
-            }
-        return {}
 
 
 class StedinEklokCurrentRangeSensor(StedinEklokSensorBase):
