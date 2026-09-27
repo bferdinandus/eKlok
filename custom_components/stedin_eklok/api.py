@@ -29,11 +29,12 @@ class StedinEklokAPI:
 
     def get_data(self) -> dict[str, Any]:
         """Haal alle data op van de API."""
-        today = datetime.now()
+        today = datetime.now(timezone.utc)
         tomorrow = today + timedelta(days=1)
         
-        today_data = self._fetch_day(today)
-        tomorrow_data = self._fetch_day(tomorrow)
+        all_items = self._fetch_all()
+        today_data = self._filter_day(all_items, today)
+        tomorrow_data = self._filter_day(all_items, tomorrow)
         
         _LOGGER.debug("Today data: %s items", len(today_data) if today_data else 0)
         _LOGGER.debug("Tomorrow data: %s items", len(tomorrow_data) if tomorrow_data else 0)
@@ -54,11 +55,10 @@ class StedinEklokAPI:
             "last_update": datetime.now().isoformat(),
         }
 
-    def _fetch_day(self, date: datetime) -> list[dict] | None:
-        """Haal data op voor een specifieke dag."""
+    def _fetch_all(self) -> list[dict] | None:
+        """Haal alle ruwe data op van de API in één request."""
         try:
-            params = {"date": date.strftime("%Y-%m-%d")}
-            response = self._session.get(API_URL, params=params, timeout=10)
+            response = self._session.get(API_URL, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -67,11 +67,33 @@ class StedinEklokAPI:
                 return data["data"]
             elif isinstance(data, list):
                 return data
-            return None
+            else:
+                return None
             
         except requests.RequestException as err:
-            _LOGGER.error("Fout bij ophalen data voor %s: %s", date.strftime("%Y-%m-%d"), err)
+            _LOGGER.error("Fout bij ophalen van Eklok data: %s", err)
             return None
+
+    def _filter_day(self, items: list[dict] | None, date: datetime) -> list[dict] | None:
+        """Filter data voor een specifieke dag."""
+        if items is None:
+            return None
+
+        target_date = date.date()
+        matching_items = []
+
+        for item in items:
+            try:
+                item_datetime = datetime.fromisoformat(item["date"].replace("Z", "+00:00"))
+
+                # Compare the UTC calendar date from the API
+                if item_datetime.date() == target_date:
+                    matching_items.append(item)
+
+            except (KeyError, TypeError, ValueError):
+                _LOGGER.warning("Ongeldige datum in API-data: %r", item)
+
+        return matching_items
 
     def _analyze_day(self, data: list[dict]) -> dict[str, Any]:
         """Analyseer de data van een dag.
@@ -117,15 +139,15 @@ class StedinEklokAPI:
         hourly_data = self._aggregate_hourly(data)
         
         # Tel groene uren (uren waar gemiddelde <= -30)
-        green_hours = sum(1 for h in hourly_data if h.get("range", 100) <= -30)
+        green_hours = sum(1 for h in hourly_data if h.get("range") is not None and h["range"] <= -30)
         
         return {
             "average_range": round(sum(ranges) / len(ranges), 1) if ranges else 100,
             "min_range": min(ranges) if ranges else 100,
             "max_range": max(ranges) if ranges else 100,
             "green_count": green_hours,  # Aantal groene uren
-            "orange_count": sum(1 for h in hourly_data if -30 < h.get("range", 100) <= 30),
-            "red_count": sum(1 for h in hourly_data if h.get("range", 100) > 30),
+            "orange_count": sum(1 for h in hourly_data if h.get("range") is not None and -30 < h["range"] <= 30),
+            "red_count": sum(1 for h in hourly_data if h.get("range") is not None and h["range"] > 30),
             "best_moments": all_moments[:5],  # Top 5 beste momenten
             "green_moments": green_moments[:10],  # Top 10 groene momenten
             "hourly_data": hourly_data,
