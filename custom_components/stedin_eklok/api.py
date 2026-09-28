@@ -34,7 +34,7 @@ class StedinEklokAPI:
     - range: -100 (zeer goed/groen) tot +100 (zeer slecht/rood)
     - Negatieve waarden = goed moment om energie te gebruiken
     - Positieve waarden = slecht moment (piek)
-    - Data in 5-minuut intervallen
+    - Data in ~5,5-minuut intervallen (11 datapunten per uur)
     - Tijden in UTC
     """
 
@@ -42,7 +42,7 @@ class StedinEklokAPI:
         self,
         session: aiohttp.ClientSession | None = None,
         time_zone: str | ZoneInfo | None = None,
-        cache_ttl: timedelta = timedelta(hours=1),
+        cache_ttl: timedelta | None = None,
     ) -> None:
         """Initialiseer de API client."""
         self._session = session
@@ -52,6 +52,7 @@ class StedinEklokAPI:
         self._last_update: str | None = None
         self._today_date: date_type | None = None
         self._today_items: dict[str, dict] = {}
+        self._tomorrow_items: dict[str, dict] = {}
         self._today_data: list[dict] = []
         self._tomorrow_data: list[dict] = []
         self._today_analysis: dict[str, Any] = {}
@@ -79,27 +80,35 @@ class StedinEklokAPI:
         day_changed = self._today_date != today_date
         
         if day_changed:
+            if self._today_date is not None and today_date == self._today_date + timedelta(days=1):
+                self._today_items = self._tomorrow_items
+            else:
+                self._today_items = {}
+            self._tomorrow_items = {}
             self._today_date = today_date
-            self._today_items = {}
+        
+        if day_changed or is_new_data:
             if all_items:
                 filtered_today = self._filter_day(all_items, today_date) or []
                 for item in filtered_today:
                     if "date" in item:
                         self._today_items[item["date"]] = item
-        
-        if is_new_data:
-            filtered_today = self._filter_day(all_items, today_date) or []
-            for item in filtered_today:
-                if "date" in item:
-                    self._today_items[item["date"]] = item
-            
-            self._tomorrow_data = self._filter_day(all_items, tomorrow_date) or []
+                
+                filtered_tomorrow = self._filter_day(all_items, tomorrow_date) or []
+                for item in filtered_tomorrow:
+                    if "date" in item:
+                        self._tomorrow_items[item["date"]] = item
 
         if day_changed or is_new_data or not self._today_analysis:
             self._today_data = sorted(
                 self._today_items.values(),
                 key=lambda x: x.get("date", "")
             ) if self._today_items else []
+            
+            self._tomorrow_data = sorted(
+                self._tomorrow_items.values(),
+                key=lambda x: x.get("date", "")
+            ) if self._tomorrow_items else []
             
             _LOGGER.debug("Today data: %s items", len(self._today_data))
             _LOGGER.debug("Tomorrow data: %s items", len(self._tomorrow_data))
@@ -128,9 +137,18 @@ class StedinEklokAPI:
         """
         now_utc = datetime.now(timezone.utc)
         if not force_refresh and self._cached_items is not None and self._last_fetch is not None:
-            if now_utc - self._last_fetch < self._cache_ttl:
-                _LOGGER.debug("Hergebruik gecachete Eklok data (leeftijd: %s)", now_utc - self._last_fetch)
-                return self._cached_items, False
+            if self._cache_ttl is not None:
+                if now_utc - self._last_fetch < self._cache_ttl:
+                    _LOGGER.debug("Hergebruik gecachete Eklok data (leeftijd: %s)", now_utc - self._last_fetch)
+                    return self._cached_items, False
+            else:
+                next_whole_hour = self._last_fetch.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+                if now_utc < next_whole_hour:
+                    _LOGGER.debug(
+                        "Hergebruik gecachete Eklok data (volgende API fetch na %s UTC)",
+                        next_whole_hour.isoformat(),
+                    )
+                    return self._cached_items, False
 
         if self._session is None:
             raise StedinEklokConnectionError("Geen aiohttp ClientSession geconfigureerd")
