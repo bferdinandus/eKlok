@@ -11,7 +11,7 @@ import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
-API_URL = "https://eklok.nl/api/pricedetail"
+API_URL = "https://api.eklok.nl/fullFeed?includenextday=true&interpolated=11&includepreviousday=true"
 DEFAULT_TIMEZONE = "Europe/Amsterdam"
 
 
@@ -34,7 +34,7 @@ class StedinEklokAPI:
     - range: -100 (zeer goed/groen) tot +100 (zeer slecht/rood)
     - Negatieve waarden = goed moment om energie te gebruiken
     - Positieve waarden = slecht moment (piek)
-    - Data in ~5,5-minuut intervallen (11 datapunten per uur)
+    - Data in 5-minuut intervallen (12 datapunten per uur)
     - Tijden in UTC
     """
 
@@ -90,14 +90,14 @@ class StedinEklokAPI:
         if day_changed or is_new_data:
             if all_items:
                 filtered_today = self._filter_day(all_items, today_date) or []
-                for item in filtered_today:
-                    if "date" in item:
-                        self._today_items[item["date"]] = item
+                self._today_items = {
+                    item["date"]: item for item in filtered_today if "date" in item
+                }
                 
                 filtered_tomorrow = self._filter_day(all_items, tomorrow_date) or []
-                for item in filtered_tomorrow:
-                    if "date" in item:
-                        self._tomorrow_items[item["date"]] = item
+                self._tomorrow_items = {
+                    item["date"]: item for item in filtered_tomorrow if "date" in item
+                }
 
         if day_changed or is_new_data or not self._today_analysis:
             self._today_data = sorted(
@@ -165,11 +165,13 @@ class StedinEklokAPI:
                 response.raise_for_status()
                 data = await response.json(content_type=None)
                 
-                # API retourneert {"data": [...]} structuur
-                if isinstance(data, dict) and "data" in data:
+                # API retourneert [...] of {"data": [...]} structuur
+                if isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
                     raw_items = data["data"]
                 elif isinstance(data, list):
                     raw_items = data
+                elif isinstance(data, dict) and all(isinstance(v, dict) and "date" in v for v in data.values()):
+                    raw_items = list(data.values())
                 else:
                     raise StedinEklokDataError(
                         f"Onverwacht dataformaat ontvangen van Eklok API: {type(data)}"
