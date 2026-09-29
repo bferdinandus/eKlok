@@ -38,6 +38,9 @@
       },
       "green_count": {
         "name": "Groene Uren Vandaag"
+      },
+      "next_green_hour": {
+        "name": "Volgend Groen Uur"
       }
     }
   }

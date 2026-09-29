@@ -48,6 +48,7 @@ async def async_setup_entry(
         StedinEklokTomorrowAverageSensor(coordinator, entry),
         StedinEklokHourlyDataSensor(coordinator, entry),
         StedinEklokGreenCountSensor(coordinator, entry),
+        StedinEklokNextGreenHourSensor(coordinator, entry),
     ]
     
     async_add_entities(sensors)
@@ -321,7 +322,6 @@ class StedinEklokGreenCountSensor(StedinEklokSensorBase):
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_green_count"
         self._attr_icon = "mdi:leaf"
-        self._attr_native_unit_of_measurement = "uur"
         self._attr_state_class = SensorStateClass.MEASUREMENT
     
     @property
@@ -343,4 +343,45 @@ class StedinEklokGreenCountSensor(StedinEklokSensorBase):
                 "beste_waarde": analysis.get("min_range"),
                 "slechtste_waarde": analysis.get("max_range"),
             }
+        return {}
+
+
+class StedinEklokNextGreenHourSensor(StedinEklokSensorBase):
+    """Sensor voor het eerstvolgende beschikbare groene uur (vandaag of morgen)."""
+
+    _attr_translation_key = "next_green_hour"
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        """Initialiseer de sensor."""
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_next_green_hour"
+        self._attr_icon = "mdi:clock-check-outline"
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return het eerstvolgende beschikbare groene uur."""
+        if self.coordinator.data:
+            next_green = self.coordinator.data.get("next_green_hour")
+            if next_green and isinstance(next_green, dict):
+                dt_str = next_green.get("datetime")
+                if dt_str:
+                    try:
+                        return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+                    except (ValueError, KeyError, TypeError):
+                        pass
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra attributen."""
+        if self.coordinator.data:
+            next_green = self.coordinator.data.get("next_green_hour")
+            if next_green and isinstance(next_green, dict):
+                return {
+                    "range": next_green.get("range"),
+                    "hour": next_green.get("hour"),
+                    "is_today": next_green.get("is_today"),
+                    "is_current_hour": next_green.get("is_current_hour"),
+                }
         return {}

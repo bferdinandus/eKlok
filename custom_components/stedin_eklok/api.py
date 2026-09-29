@@ -120,6 +120,9 @@ class StedinEklokAPI:
         
         # Bepaal huidige status (altijd voor het huidige tijdstip)
         current_status = self._get_current_status(self._today_data)
+        next_green_hour = self._get_next_green_hour(
+            self._today_analysis, self._tomorrow_analysis, now_local
+        )
         
         return {
             "today": self._today_data,
@@ -127,6 +130,7 @@ class StedinEklokAPI:
             "today_analysis": self._today_analysis,
             "tomorrow_analysis": self._tomorrow_analysis,
             "current_status": current_status,
+            "next_green_hour": next_green_hour,
             "last_update": self._last_update or now_local.isoformat(),
         }
 
@@ -342,6 +346,72 @@ class StedinEklokAPI:
             }
         
         return {"status": "unknown", "range": 100, "color": "gray", "is_good_moment": False}
+
+    def _get_next_green_hour(
+        self,
+        today_analysis: dict[str, Any] | None,
+        tomorrow_analysis: dict[str, Any] | None,
+        now_local: datetime | None = None,
+    ) -> dict[str, Any] | None:
+        """Bepaal het eerstvolgende beschikbare groene uur (vandaag of morgen)."""
+        if now_local is None:
+            now_local = datetime.now(self._tz)
+        
+        today_date = now_local.date()
+        current_hour = now_local.hour
+        
+        # 1. Zoek in de resterende uren van vandaag (vanaf het huidige uur)
+        if today_analysis:
+            hourly_today = today_analysis.get("hourly_data", [])
+            for item in hourly_today:
+                hour = item.get("hour")
+                range_val = item.get("range")
+                if hour is not None and hour >= current_hour and range_val is not None:
+                    if range_val <= -30:
+                        target_dt = datetime(
+                            today_date.year,
+                            today_date.month,
+                            today_date.day,
+                            hour,
+                            0,
+                            0,
+                            tzinfo=self._tz,
+                        )
+                        return {
+                            "datetime": target_dt.astimezone(timezone.utc).isoformat(),
+                            "range": range_val,
+                            "hour": hour,
+                            "is_today": True,
+                            "is_current_hour": (hour == current_hour),
+                        }
+        
+        # 2. Zoek in de uren van morgen
+        if tomorrow_analysis:
+            hourly_tomorrow = tomorrow_analysis.get("hourly_data", [])
+            tomorrow_date = today_date + timedelta(days=1)
+            for item in hourly_tomorrow:
+                hour = item.get("hour")
+                range_val = item.get("range")
+                if hour is not None and range_val is not None:
+                    if range_val <= -30:
+                        target_dt = datetime(
+                            tomorrow_date.year,
+                            tomorrow_date.month,
+                            tomorrow_date.day,
+                            hour,
+                            0,
+                            0,
+                            tzinfo=self._tz,
+                        )
+                        return {
+                            "datetime": target_dt.astimezone(timezone.utc).isoformat(),
+                            "range": range_val,
+                            "hour": hour,
+                            "is_today": False,
+                            "is_current_hour": False,
+                        }
+        
+        return None
 
     @staticmethod
     def _get_color(range_val: float) -> str:

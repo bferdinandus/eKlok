@@ -22,6 +22,7 @@ views:
             title: 🕐 eKlok Momenten
             entities:
               - entity: binary_sensor.stedin_eklok_good_moment
+              - entity: sensor.stedin_eklok_volgend_groen_uur
               - entity: sensor.stedin_eklok_groene_uren_vandaag
               - entity: sensor.stedin_eklok_beste_moment_vandaag
               - entity: sensor.stedin_eklok_beste_moment_morgen

@@ -38,6 +38,9 @@
       },
       "green_count": {
         "name": "Green Hours Today"
+      },
+      "next_green_hour": {
+        "name": "Next Green Hour"
       }
     }
   }

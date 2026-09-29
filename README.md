@@ -55,6 +55,7 @@ Deze integratie voegt de volgende sensors toe:
 |--------|--------------|
 | `sensor.stedin_eklok_huidige_waarde` | Huidige netbelasting (-100 tot +100) |
 | `binary_sensor.stedin_eklok_goed_moment` | Goed moment indicator (Aan/Uit) |
+| `sensor.stedin_eklok_volgend_groen_uur` | Eerstvolgende beschikbare groene uur (timestamp) |
 | `sensor.stedin_eklok_groene_uren_vandaag` | Aantal groene uren vandaag |
 | `sensor.stedin_eklok_beste_moment_vandaag` | Beste moment vandaag (timestamp) |
 | `sensor.stedin_eklok_beste_moment_morgen` | Beste moment morgen (timestamp) |
