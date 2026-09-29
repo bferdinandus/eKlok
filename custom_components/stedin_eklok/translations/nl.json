@@ -37,7 +37,8 @@
         "name": "Uurdata"
       },
       "green_count": {
-        "name": "Groene Uren Vandaag"
+        "name": "Groene Uren Vandaag",
+        "unit_of_measurement": "uur"
       },
       "next_green_hour": {
         "name": "Volgend Groen Uur"

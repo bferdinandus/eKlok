@@ -22,11 +22,12 @@ views:
             title: 🕐 eKlok Momenten
             entities:
               - entity: binary_sensor.stedin_eklok_good_moment
-              - entity: sensor.stedin_eklok_volgend_groen_uur
+              - entity: sensor.stedin_eklok_next_green_hour
               - entity: sensor.stedin_eklok_groene_uren_vandaag
               - entity: sensor.stedin_eklok_beste_moment_vandaag
               - entity: sensor.stedin_eklok_beste_moment_morgen
               - entity: sensor.stedin_eklok_gemiddelde_vandaag
+              - entity: sensor.stedin_eklok_gemiddelde_morgen
       - type: grid
         cards:
           - type: history-graph
@@ -36,8 +37,8 @@ views:
             title: 📈 Netbelasting Trend (24u)
             hours_to_show: 24
             refresh_interval: 300
-            min_y_axis: 100
-            max_y_axis: -100
+            min_y_axis: -100
+            max_y_axis: 100
           - type: custom:apexcharts-card
             header:
               show: true
@@ -52,20 +53,25 @@ views:
               yaxis:
                 min: -100
                 max: 100
-                reversed: true
+                reversed: false
             experimental:
               color_threshold: true
             series:
               - entity: sensor.stedin_eklok_uurdata
                 name: Stedin range
                 type: area
+                invert: false
                 color_threshold:
+                  - value: -100
+                    color: green
                   - value: -30
-                    color: red
+                    color: green
                   - value: 0
                     color: orange
                   - value: 30
-                    color: green
+                    color: red
+                  - value: 100
+                    color: red
                 stroke_width: 0
                 data_generator: |
                   const result = [];
